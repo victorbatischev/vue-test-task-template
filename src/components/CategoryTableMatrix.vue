@@ -1,6 +1,9 @@
 <template>
   <div style="position: relative; max-width: 500px; padding: 20px;">
-    <table class="table table-striped table-bordered category-matrix">
+    <table
+      ref="table"
+      class="table table-striped table-bordered category-matrix"
+    >
       <thead>
         <tr>
           <th v-for="(lap, lapIndex) in nodes.laps" :key="lapIndex">
@@ -32,24 +35,26 @@
         </tr>
       </tbody>
     </table>
+    <canvas width="460" height="230" ref="canvas"></canvas>
     <transition name="modal" v-if="showModal" @close="showModal = false">
       <div class="modal-mask">
         <div class="modal-wrapper">
           <div class="modal-container">
             <div class="modal-body">
               <slot name="body">
-                <video width="400" height="300" controls="controls">
-                  <source src="video/duel.ogg" type="video/ogg" />
-                  Тег video не поддерживается вашим браузером.
-                  <a href="video/duel.mp4">Скачайте видео</a>
-                </video>
-                <form action="#" class="form" id="itemform">
+                <video
+                  :src="videoLink"
+                  width="400"
+                  height="300"
+                  controls="controls"
+                />
+                <form @submit="checkForm" class="form" id="itemform">
                   <div class="row-container">
                     <div class="row-title">Видео:</div>
                     <input
+                      @change="videoSelect"
                       type="file"
                       accept="video/mp4,video/webm,application/ogg,audio/ogg,video/ogg"
-                      required
                     />
                   </div>
 
@@ -114,12 +119,14 @@ export default {
       videoLink: null
     }
   },
+  mounted() {
+    this.drawCanvas()
+  },
   computed: mapState(['nodes', 'type', 'athletes']),
   methods: {
     handleCellClick(cellIndex, lapIndex) {
       this.currentItem = [cellIndex, lapIndex]
       this.showModal = true
-      console.log(this.currentItem)
     },
     formatScore(score) {
       let firstScore = parseInt(score)
@@ -135,6 +142,52 @@ export default {
           : parseInt(time.match(/\d+$/)[0])
       return `${firstTime}:${lastTime}`
     },
+
+    checkForm: function(e) {
+      e.preventDefault()
+
+      this.update({
+        lap: this.currentItem[1],
+        athlete: this.currentItem[0],
+        score: this.score,
+        time: this.time,
+        videoLink: this.videoLink
+      })
+
+      this.showModal = false
+
+      setTimeout(() => this.drawCanvas(), 1000)
+    },
+    videoSelect: function(e) {
+      var files = e.target.files || e.dataTransfer.files
+      if (!files.length) return
+      var file = files[0]
+      this.videoLink = URL.createObjectURL(file)
+      console.log(this.videoLink)
+    },
+    drawCanvas: function() {
+      var canvas = this.$refs.canvas
+      var ctx = canvas.getContext('2d')
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      var data = `
+      <svg xmlns='http://www.w3.org/2000/svg' width='460' height='230'>
+        <foreignObject width='100%' height='100%'>
+          <div xmlns='http://www.w3.org/1999/xhtml'>
+            ${this.$refs.table.outerHTML}
+          </div>
+        </foreignObject>
+      </svg>`
+
+      var DOMURL = self.URL || self.webkitURL || self
+      var img = new Image()
+      var svg = new Blob([data], { type: 'image/svg+xml;charset=utf-8' })
+      var url = DOMURL.createObjectURL(svg)
+      img.onload = function() {
+        ctx.drawImage(img, 0, 0)
+        DOMURL.revokeObjectURL(url)
+      }
+      img.src = url
+    },
     ...mapMutations(['update'])
   },
   watch: {
@@ -144,6 +197,9 @@ export default {
         this.time = this.nodes.laps[val[1]][val[0]].time
         this.videoLink = this.nodes.laps[val[1]][val[0]].videoLink
       }
+    },
+    nodes: function(val) {
+      console.log(val)
     }
   }
 }

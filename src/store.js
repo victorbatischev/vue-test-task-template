@@ -42,11 +42,23 @@ export default new Vuex.Store({
     }
   },
   mutations: {
-    update(state, { lap, athlete, opponent, score, time }) {
+    update(state, { lap, athlete, score, time, videoLink }) {
       state.nodes.laps[lap][athlete].score = score
       state.nodes.laps[lap][athlete].time = time
+
+      if (videoLink) {
+        state.nodes.laps[lap][athlete].videoLink = videoLink
+      }
+
+      let opponent = state.nodes.laps[lap][athlete].opponent
+
       if (opponent) {
-        state.nodes.laps[lap][opponent - 1].score = score
+        let firstScore = parseInt(score)
+        let lastScore = parseInt(score.match(/\d+$/)[0])
+
+        let reverseScore = `${lastScore}:${firstScore}`
+
+        state.nodes.laps[lap][opponent - 1].score = reverseScore
         state.nodes.laps[lap][opponent - 1].time = time
       }
     }
