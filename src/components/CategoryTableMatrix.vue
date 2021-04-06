@@ -162,6 +162,12 @@ export default {
       var files = e.target.files || e.dataTransfer.files
       if (!files.length) return
       var file = files[0]
+      new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.readAsDataURL(file)
+        reader.onload = () => resolve(reader.result)
+        reader.onerror = (error) => reject(error)
+      }).then((data) => console.log(data))
       this.videoLink = URL.createObjectURL(file)
       console.log(this.videoLink)
     },
@@ -195,7 +201,6 @@ export default {
       if (val) {
         this.score = this.nodes.laps[val[1]][val[0]].score
         this.time = this.nodes.laps[val[1]][val[0]].time
-        this.videoLink = this.nodes.laps[val[1]][val[0]].videoLink
       }
     },
     nodes: function(val) {
